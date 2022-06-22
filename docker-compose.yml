@@ -1,0 +1,46 @@
+version: "3.7"
+services:
+  node:
+    image: ghcr.io/subspace/node:gemini-1b-2022-jun-13
+    volumes:
+      - ./node-data:/var/subspace:rw
+      - ./chain-spec:/chain-spec:ro
+    ports:
+      - "0.0.0.0:30333:30333"
+    restart: unless-stopped
+    command: [
+      "--chain", "chain-spec/chain-spec.json",
+      "--force-authoring",
+      "--base-path", "/var/subspace",
+      "--execution", "wasm",
+      "--pruning", "1024",
+      "--keep-blocks", "1024",
+      "--port", "30333",
+      "--rpc-cors", "all",
+      "--rpc-methods", "safe",
+      "--unsafe-ws-external",
+      "--validator",
+      "--name", "local-test-node",
+      "--node-key", "${NODE_KEY}"
+    ]
+    healthcheck:
+      timeout: 5s
+      interval: 30s
+      retries: 5
+
+  farmer:
+    depends_on:
+      node:
+        condition: service_healthy
+    image: ghcr.io/subspace/farmer:gemini-1b-2022-jun-13
+    volumes:
+      - ./farmer-data:/var/subspace:rw
+    restart: unless-stopped
+    command: [
+      "--base-path", "/var/subspace",
+      "farm",
+      "--node-rpc-url", "ws://node:9944",
+      "--ws-server-listen-addr", "0.0.0.0:9955",
+      "--reward-address", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+      "--plot-size", "10G"
+    ]
